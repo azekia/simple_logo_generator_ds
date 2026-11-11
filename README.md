@@ -37,8 +37,9 @@ al pulsar **Generar Logos** se crean 44 archivos, agrupados en cuatro bloques:
 | Letra inicial · cuadrada | Las mismas 11 variantes cuadradas, solo con el primer carácter |
 
 Cada tarjeta muestra una vista previa y un enlace **Descargar** con el nombre de
-archivo ya preparado. El botón **Limpiar** elimina los logos del DOM y libera las
-URLs temporales.
+archivo ya preparado. El botón **Descargar todos** crea en el navegador un único
+ZIP (`<texto>-logos.zip`) con todos los logos generados; **Limpiar** elimina los
+logos del DOM y libera las URLs temporales.
 
 ## Detalles técnicos
 
@@ -86,6 +87,9 @@ URLs temporales.
 - **Gilroy**: no está en Google Fonts. Si está instalada en el equipo se usa la copia
   local; si no, se intenta **Montserrat ExtraBold** desde Google Fonts y, cuando no
   hay conexión, la tipografía del sistema. La interfaz avisa del resultado.
+- **ZIP sin dependencias**: «Descargar todos» construye el ZIP en el navegador con
+  JavaScript puro (método *store*, sin compresión, con CRC32), incluye únicamente los
+  archivos realmente generados y lo descarga con un nombre como `zenon-logos.zip`.
 - **Sin memoria acumulada**: cada generación revoca las URLs de objeto anteriores.
 - **Límites**: el texto admite hasta 40 caracteres, suficiente para logotipos y para
   mantener los PNG dentro de los límites seguros del canvas.

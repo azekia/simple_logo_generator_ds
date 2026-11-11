@@ -37,6 +37,7 @@ const els = {
   content: $('results-content'),
   count: $('results-count'),
   meta: $('results-meta'),
+  downloadAll: $('download-all'),
 };
 
 /* ------------------------------------------------------------
@@ -127,6 +128,8 @@ const MAX_SQUARE_SIDE = 12000;
 const state = {
   urls: [],
   busy: false,
+  items: [],
+  zipName: '',
   fontCache: new Map(),
   googleCache: new Map(),
   stylesheets: new Map(),
@@ -176,6 +179,7 @@ function setBusy(busy) {
   state.busy = busy;
   els.generate.disabled = busy;
   els.clear.disabled = busy;
+  els.downloadAll.disabled = busy || !state.items.length;
   els.form.toggleAttribute('aria-busy', busy);
 }
 
@@ -911,6 +915,137 @@ function renderSvg(text, font, { color, kerning = 0, padding = 0, square = false
 }
 
 /* ------------------------------------------------------------
+   Exportación ZIP
+   ------------------------------------------------------------ */
+
+const CRC_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let index = 0; index < 256; index += 1) {
+    let value = index;
+    for (let bit = 0; bit < 8; bit += 1) {
+      value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+    }
+    table[index] = value >>> 0;
+  }
+  return table;
+})();
+
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (let index = 0; index < bytes.length; index += 1) {
+    crc = CRC_TABLE[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function zipDateTime(date) {
+  const time =
+    ((date.getHours() & 0x1f) << 11) |
+    ((date.getMinutes() & 0x3f) << 5) |
+    ((date.getSeconds() >> 1) & 0x1f);
+  const day =
+    ((Math.max(1980, date.getFullYear()) - 1980) << 9) |
+    (((date.getMonth() + 1) & 0x0f) << 5) |
+    (date.getDate() & 0x1f);
+  return { time, date: day };
+}
+
+/** Construye un ZIP (sin compresión) con los archivos indicados. */
+async function buildZip(items) {
+  const encoder = new TextEncoder();
+  const { time, date } = zipDateTime(new Date());
+  const parts = [];
+  const centralDirectory = [];
+  let offset = 0;
+
+  for (const item of items) {
+    const data = new Uint8Array(await item.blob.arrayBuffer());
+    const name = encoder.encode(item.filename);
+    const checksum = crc32(data);
+
+    const local = new Uint8Array(30 + name.length);
+    const localView = new DataView(local.buffer);
+    localView.setUint32(0, 0x04034b50, true);
+    localView.setUint16(4, 20, true);
+    localView.setUint16(6, 0x0800, true);
+    localView.setUint16(8, 0, true);
+    localView.setUint16(10, time, true);
+    localView.setUint16(12, date, true);
+    localView.setUint32(14, checksum, true);
+    localView.setUint32(18, data.length, true);
+    localView.setUint32(22, data.length, true);
+    localView.setUint16(26, name.length, true);
+    localView.setUint16(28, 0, true);
+    local.set(name, 30);
+    parts.push(local, data);
+
+    const entry = new Uint8Array(46 + name.length);
+    const entryView = new DataView(entry.buffer);
+    entryView.setUint32(0, 0x02014b50, true);
+    entryView.setUint16(4, 20, true);
+    entryView.setUint16(6, 20, true);
+    entryView.setUint16(8, 0x0800, true);
+    entryView.setUint16(10, 0, true);
+    entryView.setUint16(12, time, true);
+    entryView.setUint16(14, date, true);
+    entryView.setUint32(16, checksum, true);
+    entryView.setUint32(20, data.length, true);
+    entryView.setUint32(24, data.length, true);
+    entryView.setUint16(28, name.length, true);
+    entryView.setUint16(30, 0, true);
+    entryView.setUint16(32, 0, true);
+    entryView.setUint16(34, 0, true);
+    entryView.setUint16(36, 0, true);
+    entryView.setUint32(38, 0, true);
+    entryView.setUint32(42, offset, true);
+    entry.set(name, 46);
+    centralDirectory.push(entry);
+
+    offset += local.length + data.length;
+  }
+
+  const centralSize = centralDirectory.reduce((total, part) => total + part.length, 0);
+  const end = new Uint8Array(22);
+  const endView = new DataView(end.buffer);
+  endView.setUint32(0, 0x06054b50, true);
+  endView.setUint16(4, 0, true);
+  endView.setUint16(6, 0, true);
+  endView.setUint16(8, items.length, true);
+  endView.setUint16(10, items.length, true);
+  endView.setUint32(12, centralSize, true);
+  endView.setUint32(16, offset, true);
+  endView.setUint16(20, 0, true);
+
+  return new Blob([...parts, ...centralDirectory, end], { type: 'application/zip' });
+}
+
+async function handleDownloadAll() {
+  if (state.busy || !state.items.length) return;
+
+  els.downloadAll.disabled = true;
+  setStatus('Creando el ZIP con todos los logos…');
+  await nextFrame();
+
+  try {
+    const blob = await buildZip(state.items);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = state.zipName || 'logos.zip';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+    setStatus(`ZIP generado con ${state.items.length} logos.`, 'ok');
+  } catch (error) {
+    console.error(error);
+    setStatus('No se pudo crear el ZIP. Inténtalo de nuevo.', 'error');
+  } finally {
+    els.downloadAll.disabled = state.busy || !state.items.length;
+  }
+}
+
+/* ------------------------------------------------------------
    Construcción de la galería
    ------------------------------------------------------------ */
 
@@ -1095,6 +1230,9 @@ function clearResults({ silent = false } = {}) {
 
   els.count.textContent = '';
   els.meta.textContent = '';
+  state.items = [];
+  state.zipName = '';
+  els.downloadAll.disabled = true;
 
   if (!silent) {
     setStatus('Logos eliminados.');
@@ -1192,6 +1330,9 @@ async function handleGenerate(event) {
       })
     );
 
+    state.items = groups.flatMap((group) => group.items);
+    state.zipName = `${slugify(text)}-logos.zip`;
+
     renderResults(
       groups,
       `Tipografía: ${fontLabel(font)} · Kerning ${formatPercent(kerning, true)} · ` +
@@ -1254,6 +1395,7 @@ function init() {
 
   els.form.addEventListener('submit', handleGenerate);
   els.clear.addEventListener('click', () => clearResults());
+  els.downloadAll.addEventListener('click', handleDownloadAll);
 }
 
 init();

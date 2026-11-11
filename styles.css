@@ -469,6 +469,22 @@ input[type="range"]:focus-visible {
   text-align: right;
 }
 
+.results__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.results__tools .btn {
+  height: 34px;
+}
+
+.results__tools .btn svg {
+  flex: 0 0 auto;
+}
+
 .results__meta {
   font-size: 0.78rem;
   color: var(--ink-soft);
@@ -694,6 +710,10 @@ input[type="range"]:focus-visible {
   .results__aside {
     align-items: flex-start;
     text-align: left;
+  }
+
+  .results__tools {
+    justify-content: flex-start;
   }
 }
 
