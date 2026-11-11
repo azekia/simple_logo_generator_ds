@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5f4f1" />
+    <meta
+      name="description"
+      content="Generador de logotipos tipográficos en SVG y PNG, con texto recortado y fondo transparente o de color."
+    />
+    <title>Simple Logo Generator · DS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <p class="eyebrow"><span class="eyebrow__dot" aria-hidden="true"></span> Generador tipográfico</p>
+        <h1>Una palabra.<br /><span class="hero__accent">Todos tus logos.</span></h1>
+        <p class="lead">
+          Escribe el texto, elige tipografía y colores. La aplicación crea las versiones en SVG y PNG
+          recortadas al texto, con fondo transparente o de color, listas para descargar.
+        </p>
+      </header>
+
+      <form class="panel" id="logo-form" autocomplete="off">
+        <div class="field field--text">
+          <label for="logo-text">Texto del logo</label>
+          <input
+            id="logo-text"
+            name="text"
+            type="text"
+            value="zenon"
+            maxlength="40"
+            placeholder="zenon"
+            spellcheck="false"
+            required
+          />
+          <p class="hint">También generaremos la versión con solo la letra inicial.</p>
+        </div>
+
+        <div class="field field--font">
+          <label for="font-name">Tipo de letra</label>
+          <input
+            id="font-name"
+            name="font"
+            type="text"
+            value="Gilroy Extrabold"
+            list="google-fonts"
+            placeholder="Gilroy Extrabold"
+            spellcheck="false"
+          />
+          <datalist id="google-fonts"></datalist>
+          <p class="hint">
+            Cualquier familia de <a href="https://fonts.google.com" target="_blank" rel="noreferrer">Google Fonts</a>.
+            Gilroy no está en Google Fonts: si no está instalada en el equipo se usará Montserrat ExtraBold.
+          </p>
+        </div>
+
+        <div class="field">
+          <label for="letter-color">Color de letra</label>
+          <div class="color-row">
+            <input id="letter-color" type="color" value="#14130f" aria-label="Selector de color de letra" />
+            <input
+              id="letter-color-text"
+              type="text"
+              value="#14130F"
+              maxlength="7"
+              spellcheck="false"
+              aria-label="Color de letra en hexadecimal"
+            />
+          </div>
+          <p class="hint" id="letter-color-rgb">rgb(20, 19, 15)</p>
+        </div>
+
+        <div class="field">
+          <label for="bg-color">Color de fondo</label>
+          <div class="color-row">
+            <input id="bg-color" type="color" value="#ffce3a" aria-label="Selector de color de fondo" />
+            <input
+              id="bg-color-text"
+              type="text"
+              value="#FFCE3A"
+              maxlength="7"
+              spellcheck="false"
+              aria-label="Color de fondo en hexadecimal"
+            />
+          </div>
+          <p class="hint" id="bg-color-rgb">rgb(255, 206, 58)</p>
+        </div>
+
+        <div class="controls">
+          <div class="field">
+            <label for="font-weight">Peso</label>
+            <select id="font-weight" name="weight">
+              <option value="auto">Auto · según el nombre</option>
+            </select>
+            <p class="hint">Con «Auto» se usa el peso del nombre (Extrabold = 800).</p>
+          </div>
+
+          <div class="field">
+            <label for="kerning">Kerning</label>
+            <div class="range-row">
+              <input id="kerning" name="kerning" type="range" min="-20" max="50" step="1" value="0" />
+              <output id="kerning-value" for="kerning">0 %</output>
+            </div>
+            <p class="hint">Espacio entre letras, en % del tamaño de la letra. Los valores negativos las acercan.</p>
+          </div>
+
+          <div class="field">
+            <label for="padding">Padding</label>
+            <div class="range-row">
+              <input id="padding" name="padding" type="range" min="0" max="50" step="1" value="0" />
+              <output id="padding-value" for="padding">0 %</output>
+            </div>
+            <p class="hint">Margen alrededor del texto, en % de su altura. En PNG el alto sigue siendo 80/400 px.</p>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn--primary" id="generate" type="submit">Generar Logos</button>
+          <button class="btn" id="clear" type="button">Limpiar</button>
+        </div>
+
+        <p class="status" id="status" role="status" aria-live="polite"></p>
+        <p class="notice" id="notice" hidden></p>
+      </form>
+
+      <div class="results" id="results" role="region" aria-labelledby="results-title">
+        <div class="results__head">
+          <div>
+            <p class="section-kicker">Exportaciones</p>
+            <h2 id="results-title">Logos generados</h2>
+          </div>
+          <div class="results__aside">
+            <span class="badge" id="results-count"></span>
+            <p class="results__meta" id="results-meta"></p>
+          </div>
+        </div>
+        <div class="results__content" id="results-content">
+          <p class="empty">Aún no hay logos. Configura las opciones y pulsa «Generar Logos».</p>
+        </div>
+      </div>
+
+      <footer class="foot">
+        Todo se genera en tu navegador: ninguna imagen se sube a ningún servidor. SVG vectorial + PNG a 80 y 400 px.
+      </footer>
+    </div>
+
+    <noscript>Esta aplicación necesita JavaScript para generar los logos.</noscript>
+  </body>
+</html>
